@@ -1,6 +1,6 @@
 import { useEffect, useState, FormEvent } from 'react'
 import { useAuth } from '../contexts/AuthContext'
-import { changePassword, getSettings, updateSettings } from '../api'
+import { changePassword, getSettings, updateSettings, getBackupConfig, restoreBackupConfig } from '../api'
 
 const card: React.CSSProperties = { background: '#111115', border: '1px solid #252530', borderRadius: 16, padding: 24 }
 
@@ -51,6 +51,11 @@ export default function Settings() {
   const [notifyError, setNotifyError] = useState(true)
   const [sysMsg, setSysMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
   const [sysLoading, setSysLoading] = useState(false)
+
+  // Backup / Restore state
+  const [backupLoading, setBackupLoading] = useState(false)
+  const [restoreLoading, setRestoreLoading] = useState(false)
+  const [backupMsg, setBackupMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
 
   // Load settings on mount
   useEffect(() => {
@@ -115,6 +120,55 @@ export default function Settings() {
       setSysMsg({ type: 'err', text: (err as Error).message })
     } finally {
       setSysLoading(false)
+    }
+  }
+
+  const handleBackupDownload = async () => {
+    setBackupLoading(true)
+    setBackupMsg(null)
+    try {
+      const data = await getBackupConfig()
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `zonekeeper-backup-${new Date().toISOString().slice(0, 10)}.json`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+      setBackupMsg({ type: 'ok', text: 'Backup downloaded successfully' })
+    } catch (err) {
+      setBackupMsg({ type: 'err', text: `Backup failed: ${(err as Error).message}` })
+    } finally {
+      setBackupLoading(false)
+    }
+  }
+
+  const handleRestoreUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    
+    if (!window.confirm('Warning: Restoring this backup will completely overwrite your current accounts, zones, records, and sync logs. Do you want to proceed?')) {
+      e.target.value = ''
+      return
+    }
+
+    setRestoreLoading(true)
+    setBackupMsg(null)
+    try {
+      const text = await file.text()
+      const data = JSON.parse(text)
+      await restoreBackupConfig(data)
+      setBackupMsg({ type: 'ok', text: 'Configuration restored successfully! Refreshing page...' })
+      setTimeout(() => {
+        window.location.reload()
+      }, 1500)
+    } catch (err) {
+      setBackupMsg({ type: 'err', text: `Restore failed: ${(err as Error).message}` })
+    } finally {
+      setRestoreLoading(false)
+      e.target.value = ''
     }
   }
 
@@ -249,6 +303,68 @@ export default function Settings() {
             {sysLoading ? 'saving…' : 'save system settings'}
           </button>
         </form>
+      </div>
+
+      {/* Backup & Restore Panel */}
+      <div style={card}>
+        <h2 style={{ color: '#e5e7eb', fontFamily: 'monospace', fontSize: 13, fontWeight: 600, margin: '0 0 20px' }}>backup & restore</h2>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <p style={{ color: '#6b7280', fontFamily: 'monospace', fontSize: 12, margin: 0, lineHeight: '1.5' }}>
+            Export your entire Zonekeeper configuration (accounts, zones, records, and system settings) to a portable JSON file, or restore it from an existing backup.
+          </p>
+
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 4 }}>
+            <button
+              onClick={handleBackupDownload}
+              disabled={backupLoading}
+              style={{ ...btnStyle(), marginTop: 0 }}
+              onMouseEnter={e => { if (!backupLoading) e.currentTarget.style.background = 'rgba(251,191,36,0.18)' }}
+              onMouseLeave={e => { if (!backupLoading) e.currentTarget.style.background = 'rgba(251,191,36,0.1)' }}
+            >
+              {backupLoading ? 'downloading…' : 'export configuration'}
+            </button>
+
+            <label style={{
+              padding: '10px 20px',
+              borderRadius: 10,
+              border: '1px solid #252530',
+              background: '#1a1a24',
+              color: '#e5e7eb',
+              cursor: restoreLoading ? 'not-allowed' : 'pointer',
+              fontFamily: 'monospace',
+              fontSize: 13,
+              display: 'inline-block',
+              textAlign: 'center',
+              transition: 'background 0.15s'
+            }}
+            onMouseEnter={e => { if (!restoreLoading) e.currentTarget.style.background = '#252535' }}
+            onMouseLeave={e => { if (!restoreLoading) e.currentTarget.style.background = '#1a1a24' }}
+            >
+              {restoreLoading ? 'restoring…' : 'import backup'}
+              <input
+                type="file"
+                accept=".json"
+                onChange={handleRestoreUpload}
+                disabled={restoreLoading}
+                style={{ display: 'none' }}
+              />
+            </label>
+          </div>
+
+          {backupMsg && (
+            <div style={{
+              background: backupMsg.type === 'ok' ? 'rgba(74,222,128,0.07)' : 'rgba(248,113,113,0.07)',
+              border: `1px solid ${backupMsg.type === 'ok' ? 'rgba(74,222,128,0.18)' : 'rgba(248,113,113,0.18)'}`,
+              borderRadius: 8,
+              padding: '8px 12px',
+              color: backupMsg.type === 'ok' ? '#4ade80' : '#f87171',
+              fontFamily: 'monospace',
+              fontSize: 12
+            }}>
+              {backupMsg.text}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Change Password Panel */}

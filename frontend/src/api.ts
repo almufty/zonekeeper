@@ -101,4 +101,6 @@ export interface SystemSettings {
 }
 export const getSettings = () => req<SystemSettings>('GET', '/api/settings');
 export const updateSettings = (data: Partial<SystemSettings>) => req<{ ok: boolean }>('PUT', '/api/settings', data);
+export const getBackupConfig = () => req<any>('GET', '/api/settings/backup');
+export const restoreBackupConfig = (data: any) => req<{ ok: boolean }>('POST', '/api/settings/restore', data);
 

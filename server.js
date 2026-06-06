@@ -66,6 +66,11 @@ app.use(session({
 
 // HTTP Basic Auth completely removed
 
+// Public health check route
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'OK', timestamp: new Date().toISOString() });
+});
+
 // Public auth routes (login, logout, me) — no CSRF check here
 app.use('/api', authRouter);
 

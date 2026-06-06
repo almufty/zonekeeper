@@ -1,0 +1,29 @@
+# Node modules
+node_modules/
+frontend/node_modules/
+
+# Local database and state files
+*.db
+*.db-shm
+*.db-wal
+zonekeeper.db*
+
+# Environment secrets and local files
+.env
+.env.local
+.idea/
+.vscode/
+.antigravitycli/
+.git/
+.gitignore
+
+# Frontend build outputs
+frontend/dist/
+tsconfig.app.tsbuildinfo
+tsconfig.node.tsbuildinfo
+
+# Test files and coverage
+test/
+coverage/
+vitest.config.js
+frontend/src/**/*.test.*

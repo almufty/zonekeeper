@@ -35,7 +35,7 @@ export function createRecord({ zone_id, record_name, record_type = 'A', ttl = 36
 }
 
 export function updateRecord(id, fields) {
-  const allowed = ['record_name', 'ttl', 'proxied', 'enabled', 'last_ip', 'last_checked_at', 'last_status', 'cloudflare_record_id'];
+  const allowed = ['record_name', 'record_type', 'ttl', 'proxied', 'enabled', 'last_ip', 'last_checked_at', 'last_status', 'cloudflare_record_id'];
   const updates = Object.keys(fields).filter(k => allowed.includes(k));
   if (updates.length === 0) return getRecord(id);
   const values = updates.map(k => {

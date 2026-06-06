@@ -44,6 +44,19 @@ db.exec(`
     status     TEXT NOT NULL CHECK(status IN ('updated', 'unchanged', 'error')),
     message    TEXT
   );
+
+  CREATE TABLE IF NOT EXISTS settings (
+    key   TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+  );
+
+  INSERT OR IGNORE INTO settings (key, value) VALUES ('poll_interval', '300');
+  INSERT OR IGNORE INTO settings (key, value) VALUES ('log_retention_days', '30');
+  INSERT OR IGNORE INTO settings (key, value) VALUES ('discord_webhook_url', '');
+  INSERT OR IGNORE INTO settings (key, value) VALUES ('telegram_bot_token', '');
+  INSERT OR IGNORE INTO settings (key, value) VALUES ('telegram_chat_id', '');
+  INSERT OR IGNORE INTO settings (key, value) VALUES ('notify_on_success', 'false');
+  INSERT OR IGNORE INTO settings (key, value) VALUES ('notify_on_error', 'true');
 `);
 
 // MEDIUM-6 + MEDIUM-5 fix: recreate records table with CHECK constraints on

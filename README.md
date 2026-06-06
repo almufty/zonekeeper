@@ -1,179 +1,152 @@
+<p align="center">
+  <img src="frontend/public/logo.png" alt="Zonekeeper Logo" width="120" height="120" />
+</p>
+
 # Zonekeeper — Cloudflare DDNS Manager
 
-A self-hosted web app that replaces per-domain DDNS bash scripts with a single unified service. Manage every Cloudflare DNS record from one UI; the scheduler keeps them in sync with your current public IP automatically.
+A self-hosted web application that replaces multiple custom DDNS bash scripts with a single, secure, and unified service. Manage and monitor all of your Cloudflare DNS zones from a single dashboard, with an automated scheduler keeping them in sync with your public IP.
 
 ---
 
 ## Features
 
-- Manage multiple Cloudflare accounts (Global API Key or API Token)
-- Add any number of zones and A/AAAA records per account
-- Automatic IP sync on a configurable interval (default 5 min, minimum 60 s)
-- Force-sync individual records or all records at once
-- Per-record sync history with status badges (updated / unchanged / error)
-- Dashboard with live public IP, last-poll time, and recent activity feed
-- Optional HTTP Basic Auth for an additional network-level barrier
-- AES-256-GCM encryption for stored Cloudflare API credentials
-- Single SQLite file — no external database
+- **Multi-Account Support**: Manage multiple Cloudflare accounts using either Global API Keys or scoped API Tokens.
+- **Dynamic Zone Tracking**: Add any number of DNS zones and A/AAAA records to keep updated.
+- **Automated Synchronization**: Periodic IP monitoring and synchronization (configurable poll interval, minimum 60 seconds).
+- **Granular Control**: Force-sync individual records or sync all records at once directly from the interactive dashboard.
+- **Interactive Dashboard**: Features a live public IP flow visualizer with animated packets, sync statistics with sparkline charts, and a detailed recent activity logs feed.
+- **High Security**:
+  - **AES-256-GCM encryption** for storing Cloudflare API keys at rest.
+- **Lightweight Infrastructure**: Single SQLite database file — no external database server needed.
 
 ---
 
-## Requirements
+## Important DNS Setup Notes
 
+> [!IMPORTANT]
+> **Records Must Exist in Cloudflare First**: Zonekeeper updates existing records; it does not automatically create them in your Cloudflare DNS zone. Before adding a record to Zonekeeper, make sure it already exists in your Cloudflare dashboard.
+>
+> You can configure the record in Cloudflare with any dummy/placeholder IP address:
+> - **For `A` (IPv4) records**: Use a placeholder IP such as `192.0.2.1`
+> - **For `AAAA` (IPv6) records**: Use a placeholder IPv6 such as `2001:db8::1`
+
+---
+
+## Quick Start (Docker Compose)
+
+The easiest way to run Zonekeeper in production is using Docker Compose.
+
+1. **Create a `docker-compose.yml` file** (or use the one in the root of this repo):
+   ```yaml
+   services:
+     zonekeeper:
+       image: zonekeeper:latest
+       build: .
+       container_name: zonekeeper
+       restart: unless-stopped
+       ports:
+         - "3000:3000"
+       volumes:
+         - zonekeeper_data:/app/data
+       environment:
+         - NODE_ENV=production
+         - PORT=3000
+         - DB_PATH=/app/data/zonekeeper.db
+         - SESSION_SECRET=your_long_session_secret_here
+         - ENCRYPTION_KEY=your_64_char_hex_encryption_key_here
+   
+   volumes:
+     zonekeeper_data:
+   ```
+
+2. **Generate secrets**:
+   Use the utility command below to generate your random secrets:
+   ```bash
+   # Generate a random 64-character hex key (use this for ENCRYPTION_KEY and SESSION_SECRET)
+   node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+   ```
+
+3. **Spin up the container**:
+   ```bash
+   docker compose up -d
+   ```
+   Open `http://localhost:3000` to access the interface. On the first run, credentials will be automatically printed to the Docker logs or default to the `admin` account.
+
+---
+
+## Native Installation (Node.js)
+
+### Requirements
 - **Node.js ≥ 22**
 - npm
 
-> **Note:** The backend uses [`better-sqlite3`](https://github.com/WiseLibs/better-sqlite3), not the experimental built-in `node:sqlite` module.
+### Setup Steps
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/your-user/zonekeeper-ddns.git
+   cd zonekeeper-ddns
+   ```
 
----
+2. **Install all dependencies** (backend + frontend):
+   ```bash
+   npm run install:all
+   ```
 
-## Setup
+3. **Configure environment secrets**:
+   ```bash
+   cp .env.example .env
+   # Open .env and populate SESSION_SECRET and ENCRYPTION_KEY (strongly recommended)
+   ```
 
-```bash
-# 1. Clone
-git clone https://github.com/your-user/zonekeeper-ddns.git
-cd zonekeeper-ddns
+4. **Build the frontend**:
+   ```bash
+   npm run build
+   ```
 
-# 2. Install all dependencies (backend + frontend)
-npm run install:all
-
-# 3. Configure
-cp .env.example .env
-$EDITOR .env          # set SESSION_SECRET and ENCRYPTION_KEY at minimum
-
-# 4. Build the frontend
-npm run build         # outputs to frontend/dist/
-
-# 5. Start
-npm start
-# → http://localhost:3000
-```
+5. **Start the server**:
+   ```bash
+   npm start
+   ```
+   Open `http://localhost:3000` to start using the app.
 
 ---
 
 ## Environment Variables
 
+Configure Zonekeeper using the following variables in a `.env` file or within your container environment:
+
 | Variable | Default | Description |
-|---|---|---|
-| `PORT` | `3000` | HTTP port the server listens on |
-| `DB_PATH` | `./zonekeeper.db` | Path to the SQLite database file |
-| `POLL_INTERVAL` | `300` | Sync interval in **seconds** (minimum 60) |
-| `LOG_RETENTION_DAYS` | `30` | Days of sync history to keep |
-| `SESSION_SECRET` | *(required in prod)* | Secret for signing session cookies |
-| `ENCRYPTION_KEY` | *(strongly recommended)* | 64-char hex key for encrypting stored API credentials |
-| `ADMIN_USER` | `admin` | Username for first-run admin account |
-| `ADMIN_PASS` | *(auto-generated)* | Password for first-run admin account |
-| `AUTH_USER` | *(empty)* | HTTP Basic Auth username — both must be set to enable |
-| `AUTH_PASS` | *(empty)* | HTTP Basic Auth password |
-| `LOG_LEVEL` | `info` | Log level: `error` \| `warn` \| `info` \| `debug` |
-
-### Generating secrets
-
-```bash
-# SESSION_SECRET and ENCRYPTION_KEY — 64 random hex chars each
-node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
-```
+| :--- | :--- | :--- |
+| `PORT` | `3000` | Port the server listens on. |
+| `DB_PATH` | `./zonekeeper.db` | Location of the SQLite database. |
+| `POLL_INTERVAL` | `300` | Initial default sync interval in **seconds** (minimum 60). Can be changed dynamically in Web UI settings. |
+| `LOG_RETENTION_DAYS` | `30` | Initial default logs retention period in **days**. Can be changed dynamically in Web UI settings. |
+| `SESSION_SECRET` | *(Auto-generated)* | Secret string for signing cookies (required in production). |
+| `ENCRYPTION_KEY` | *(Plaintext)* | 64-char hex key used to encrypt Cloudflare API keys at rest. |
+| `ADMIN_USER` | `admin` | Initial admin account username. |
+| `ADMIN_PASS` | *(Auto-generated)* | Initial admin account password (printed to stdout on first startup). |
 
 ---
 
-## Development
+## Development & Test
+
+Run the backend and frontend separately with watch compilation:
 
 ```bash
-# Terminal 1 — backend with file-watch reload
+# Terminal 1: run backend API
 npm run dev:backend
 
-# Terminal 2 — Vite dev server (proxies /api → localhost:3000)
+# Terminal 2: run Vite dev server (proxies API requests to port 3000)
 npm run dev:frontend
-# → http://localhost:5173
 ```
 
-To rebuild the frontend for production:
-
+Run test suite:
 ```bash
-npm run build   # outputs to frontend/dist/
+npm test
 ```
 
 ---
 
-## Testing
+## License
 
-```bash
-npm test          # run tests once
-npm run test:watch   # watch mode
-```
-
----
-
-## Cloudflare Credentials
-
-**Global API Key** — found at [dash.cloudflare.com/profile/api-tokens](https://dash.cloudflare.com/profile/api-tokens) under "Global API Key". Use your account email as the email field.
-
-**API Token** — create a token with `Zone › DNS › Edit` permissions scoped to the zones you want to manage.
-
-Use the **Verify** button on the Accounts page to confirm credentials and browse your Cloudflare zones before adding records.
-
----
-
-## Homelab Deployment
-
-### systemd
-
-Create `/etc/systemd/system/zonekeeper.service`:
-
-```ini
-[Unit]
-Description=Zonekeeper DDNS Manager
-After=network-online.target
-Wants=network-online.target
-
-[Service]
-Type=simple
-User=zonekeeper
-WorkingDirectory=/opt/zonekeeper
-EnvironmentFile=/opt/zonekeeper/.env
-ExecStart=/usr/bin/node server.js
-Restart=on-failure
-RestartSec=10
-
-[Install]
-WantedBy=multi-user.target
-```
-
-```bash
-sudo systemctl enable --now zonekeeper
-```
-
-### Docker (unofficial)
-
-```dockerfile
-FROM node:22-alpine
-WORKDIR /app
-COPY package*.json ./
-RUN npm install --omit=dev
-COPY . .
-EXPOSE 3000
-CMD ["node", "server.js"]
-```
-
-Build the frontend first (`npm run build`), then build the image. Pass env vars via `--env-file` and mount a volume for the database:
-
-```bash
-docker run -d \
-  --name zonekeeper \
-  --env-file .env \
-  -v /data/zonekeeper:/app \
-  -p 3000:3000 \
-  zonekeeper
-```
-
----
-
-## Data
-
-The SQLite database (`zonekeeper.db`) stores all accounts, zones, records, and sync history. Cloudflare API keys are encrypted at rest using AES-256-GCM when `ENCRYPTION_KEY` is configured. Back up the database by copying the file:
-
-```bash
-sqlite3 zonekeeper.db ".backup zonekeeper-backup.db"
-```
-
-Deleting an account cascades to its zones, records, and all sync log entries.
+This project is licensed under the MIT License. See [LICENSE](file:///C:/Projects/zonekeeper-ddns/LICENSE) for details.

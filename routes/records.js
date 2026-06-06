@@ -73,11 +73,24 @@ router.put('/records/:id', (req, res) => {
     if (!record) return res.status(404).json({ error: 'Record not found' });
 
     // Explicitly pick and validate fields — don't pass raw req.body to data layer
-    const allowed = ['record_name', 'ttl', 'proxied', 'enabled', 'cloudflare_record_id'];
+    const allowed = ['record_name', 'record_type', 'zone_id', 'ttl', 'proxied', 'enabled', 'cloudflare_record_id'];
     const fields = {};
     for (const key of allowed) {
       if (req.body[key] !== undefined) fields[key] = req.body[key];
     }
+    
+    if (fields.record_type !== undefined) {
+      if (!['A', 'AAAA'].includes(fields.record_type)) {
+        return res.status(400).json({ error: 'record_type must be "A" or "AAAA"' });
+      }
+    }
+
+    if (fields.zone_id !== undefined) {
+      const zone = getZone(Number(fields.zone_id));
+      if (!zone) return res.status(404).json({ error: 'Zone not found' });
+      fields.zone_id = Number(fields.zone_id);
+    }
+
     if (fields.ttl !== undefined) {
       const parsedTtl = Number(fields.ttl);
       if (!isValidTtl(parsedTtl)) {

@@ -6,7 +6,6 @@ import { randomBytes } from 'crypto';
 import { fileURLToPath } from 'url';
 import path from 'path';
 import { requireAuth } from './middleware/requireAuth.js';
-import { basicAuth } from './middleware/basicAuth.js';
 import { csrfProtect } from './middleware/csrfProtect.js';
 import authRouter from './routes/auth.js';
 import accountsRouter from './routes/accounts.js';
@@ -14,6 +13,7 @@ import zonesRouter from './routes/zones.js';
 import recordsRouter from './routes/records.js';
 import syncRouter from './routes/sync.js';
 import statusRouter from './routes/status.js';
+import settingsRouter from './routes/settings.js';
 import { startScheduler } from './scheduler.js';
 import { userCount, createUser } from './data/users.js';
 import { migrateApiKeys } from './lib/crypto.js';
@@ -64,11 +64,7 @@ app.use(session({
   },
 }));
 
-// MEDIUM-8 fix: optional HTTP Basic Auth guard — mounts only when both vars are set
-if (process.env.AUTH_USER && process.env.AUTH_PASS) {
-  app.use(basicAuth);
-  logger.info({ event: 'startup.basic-auth' }, 'HTTP Basic Auth enabled');
-}
+// HTTP Basic Auth completely removed
 
 // Public auth routes (login, logout, me) — no CSRF check here
 app.use('/api', authRouter);
@@ -81,6 +77,7 @@ app.use('/api', zonesRouter);
 app.use('/api', recordsRouter);
 app.use('/api', syncRouter);
 app.use('/api', statusRouter);
+app.use('/api', settingsRouter);
 
 const publicDir = path.join(__dirname, 'frontend', 'dist');
 app.use(express.static(publicDir));

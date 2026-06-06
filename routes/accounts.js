@@ -105,7 +105,7 @@ router.get('/accounts/:id/zones/:zoneId/records', async (req, res) => {
     const account = getAccountWithKey(Number(req.params.id));
     if (!account) return res.status(404).json({ error: 'Account not found' });
     const records = await listDnsRecords(account, req.params.zoneId);
-    res.json(records.map(r => ({ id: r.id, name: r.name, content: r.content, ttl: r.ttl, proxied: r.proxied })));
+    res.json(records.map(r => ({ id: r.id, name: r.name, content: r.content, ttl: r.ttl, proxied: r.proxied, type: r.type })));
   } catch (err) {
     res.status(502).json({ error: err.message });
   }

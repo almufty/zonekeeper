@@ -3,12 +3,20 @@ import type { StatusResponse } from '../types'
 import { getStatus, syncAll, syncRecord } from '../api'
 import SyncLogFeed from '../components/SyncLogFeed'
 
+function parseDate(ts: string | null) {
+  if (!ts) return new Date()
+  if (!ts.includes('Z') && !ts.includes('+')) {
+    return new Date(ts.replace(' ', 'T') + 'Z')
+  }
+  return new Date(ts)
+}
+
 function relTime(ts: string | null) {
   if (!ts) return 'never'
-  const diff = Date.now() - new Date(ts).getTime()
+  const diff = Date.now() - parseDate(ts).getTime()
   if (diff < 60000) return `${Math.round(diff / 1000)}s ago`
   if (diff < 3600000) return `${Math.round(diff / 60000)}m ago`
-  return new Date(ts).toLocaleTimeString()
+  return parseDate(ts).toLocaleTimeString()
 }
 
 function MonitorIcon() {
@@ -43,8 +51,40 @@ function ZkIcon() {
   )
 }
 
-function FlowDiagram({ ip, lastPoll, recordCount }: { ip: string | null; lastPoll: string | null; recordCount: number }) {
-  const online = !!ip
+function CountdownTimer({ lastPollTime, pollInterval }: { lastPollTime: string | null; pollInterval: number }) {
+  const [secondsLeft, setSecondsLeft] = useState<number | null>(null)
+
+  useEffect(() => {
+    if (!lastPollTime) return
+
+    const calculate = () => {
+      const last = parseDate(lastPollTime).getTime()
+      const next = last + pollInterval * 1000
+      const diff = Math.max(0, Math.round((next - Date.now()) / 1000))
+      setSecondsLeft(diff)
+    }
+
+    calculate()
+    const timer = setInterval(calculate, 1000)
+    return () => clearInterval(timer)
+  }, [lastPollTime, pollInterval])
+
+  if (secondsLeft === null || !lastPollTime) return <div style={{ color: '#4b5563', fontSize: 9 }}>waiting...</div>
+  if (secondsLeft === 0) return <div style={{ color: '#4ade80', fontSize: 9 }}>syncing...</div>
+
+  const m = Math.floor(secondsLeft / 60)
+  const s = secondsLeft % 60
+  const timeStr = m > 0 ? `${m}m ${s}s` : `${s}s`
+
+  return (
+    <div style={{ color: '#6b7280', fontFamily: 'monospace', fontSize: 9, marginTop: 4 }}>
+      next: <span style={{ color: '#fbbf24' }}>{timeStr}</span>
+    </div>
+  )
+}
+
+function FlowDiagram({ ipV4, ipV6, lastPoll, recordCount, pollInterval }: { ipV4: string | null; ipV6: string | null; lastPoll: string | null; recordCount: number; pollInterval: number }) {
+  const online = !!(ipV4 || ipV6)
   return (
     <div style={{ marginBottom: 28, padding: '22px 28px', background: '#111115', border: '1px solid #252530', borderRadius: 16, position: 'relative', overflow: 'hidden' }}>
       {/* dot-grid */}
@@ -65,7 +105,9 @@ function FlowDiagram({ ip, lastPoll, recordCount }: { ip: string | null; lastPol
             </div>
             <div>
               <div style={{ color: '#4b5563', fontFamily: 'monospace', fontSize: 10, marginBottom: 2 }}>your ip</div>
-              <div style={{ color: online ? '#e5e7eb' : '#4b5563', fontFamily: 'monospace', fontSize: 13, fontWeight: 600 }}>{ip ?? '—'}</div>
+              {ipV4 && <div style={{ color: '#e5e7eb', fontFamily: 'monospace', fontSize: 11, fontWeight: 600 }}>v4: {ipV4}</div>}
+              {ipV6 && <div style={{ color: '#e5e7eb', fontFamily: 'monospace', fontSize: 11, fontWeight: 600, marginTop: 2 }}>v6: {ipV6}</div>}
+              {!ipV4 && !ipV6 && <div style={{ color: '#4b5563', fontFamily: 'monospace', fontSize: 13, fontWeight: 600 }}>—</div>}
             </div>
           </div>
         </div>
@@ -75,10 +117,19 @@ function FlowDiagram({ ip, lastPoll, recordCount }: { ip: string | null; lastPol
           <svg viewBox="0 0 100 8" preserveAspectRatio="none" style={{ width: '100%', height: 8, overflow: 'visible' }}>
             <line x1="0" y1="4" x2="100" y2="4" stroke="#252530" strokeWidth="1.5" strokeDasharray="4 4" />
             {online && (
-              <circle cx="0" cy="4" r="2.5" fill="#fbbf24">
-                <animate attributeName="cx" values="0;100" dur="2s" repeatCount="indefinite" />
-                <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.1;0.9;1" dur="2s" repeatCount="indefinite" />
-              </circle>
+              <line
+                x1="0"
+                y1="4"
+                x2="100"
+                y2="4"
+                stroke="#fbbf24"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeDasharray="25 75"
+                opacity="0.25"
+              >
+                <animate attributeName="stroke-dashoffset" values="100;0" dur="6s" repeatCount="indefinite" />
+              </line>
             )}
           </svg>
         </div>
@@ -92,6 +143,7 @@ function FlowDiagram({ ip, lastPoll, recordCount }: { ip: string | null; lastPol
             <div>
               <div style={{ color: '#4b5563', fontFamily: 'monospace', fontSize: 10, marginBottom: 2 }}>zonekeeper</div>
               <div style={{ color: '#9ca3af', fontFamily: 'monospace', fontSize: 11 }}>{lastPoll ? relTime(lastPoll) : 'waiting…'}</div>
+              {lastPoll && <CountdownTimer lastPollTime={lastPoll} pollInterval={pollInterval} />}
             </div>
           </div>
         </div>
@@ -101,10 +153,19 @@ function FlowDiagram({ ip, lastPoll, recordCount }: { ip: string | null; lastPol
           <svg viewBox="0 0 100 8" preserveAspectRatio="none" style={{ width: '100%', height: 8, overflow: 'visible' }}>
             <line x1="0" y1="4" x2="100" y2="4" stroke="#252530" strokeWidth="1.5" strokeDasharray="4 4" />
             {online && (
-              <circle cx="0" cy="4" r="2.5" fill="#fbbf24">
-                <animate attributeName="cx" values="0;100" dur="2s" begin="0.8s" repeatCount="indefinite" />
-                <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.1;0.9;1" dur="2s" begin="0.8s" repeatCount="indefinite" />
-              </circle>
+              <line
+                x1="0"
+                y1="4"
+                x2="100"
+                y2="4"
+                stroke="#fbbf24"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeDasharray="25 75"
+                opacity="0.25"
+              >
+                <animate attributeName="stroke-dashoffset" values="100;0" dur="6s" begin="2.5s" repeatCount="indefinite" />
+              </line>
             )}
           </svg>
         </div>
@@ -249,9 +310,11 @@ export default function Dashboard() {
       {error && <p style={{ color: '#f87171', fontFamily: 'monospace', fontSize: 13 }}>{error}</p>}
 
       <FlowDiagram
-        ip={status?.publicIp ?? null}
+        ipV4={status?.publicIpV4 ?? null}
+        ipV6={status?.publicIpV6 ?? null}
         lastPoll={status?.lastPollTime ?? null}
         recordCount={counts?.total ?? 0}
+        pollInterval={status?.pollInterval ?? 300}
       />
 
       {/* Metric Cards Grid */}

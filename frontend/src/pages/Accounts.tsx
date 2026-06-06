@@ -9,7 +9,7 @@ const input = { background: '#0d0d0f', border: '1px solid #252530', borderRadius
 const btn   = (color = '#fbbf24') => ({ padding: '8px 16px', borderRadius: 8, border: `1px solid ${color}`, background: `${color}18`, color, cursor: 'pointer' as const, fontFamily: 'monospace', fontSize: 12 })
 
 type FormState = { name: string; auth_email: string; auth_method: 'global' | 'token'; auth_key: string }
-const EMPTY: FormState = { name: '', auth_email: '', auth_method: 'global', auth_key: '' }
+const EMPTY: FormState = { name: '', auth_email: '', auth_method: 'token', auth_key: '' }
 
 export default function Accounts() {
   const [accounts, setAccounts]   = useState<Account[]>([])
@@ -77,8 +77,8 @@ export default function Accounts() {
           <input style={input} placeholder="label" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} required />
           <input style={input} placeholder="email" type="email" value={form.auth_email} onChange={e => setForm(f => ({ ...f, auth_email: e.target.value }))} required />
           <select style={input} value={form.auth_method} onChange={e => setForm(f => ({ ...f, auth_method: e.target.value as 'global' | 'token' }))}>
-            <option value="global">Global API Key</option>
             <option value="token">API Token</option>
+            <option value="global">Global API Key</option>
           </select>
           <input
             style={input}

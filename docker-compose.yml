@@ -1,0 +1,23 @@
+services:
+  zonekeeper:
+    build: .
+    container_name: zonekeeper
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - zonekeeper_data:/app/data
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DB_PATH=/app/data/zonekeeper.db
+      # MANDATORY: Set a secure long random string in production for signing session cookies
+      - SESSION_SECRET=change-me-to-a-long-random-string-in-production
+      # STRONGLY RECOMMENDED: Set a 64-character hex string to encrypt Cloudflare keys at rest
+      - ENCRYPTION_KEY=change-me-to-a-64-character-hex-string-in-production
+      # OPTIONAL: Set the initial admin username (default is admin)
+      # - ADMIN_USER=admin
+      # - ADMIN_PASS=initial-admin-password-override
+
+volumes:
+  zonekeeper_data:

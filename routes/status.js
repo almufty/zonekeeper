@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import { listRecords } from '../data/records.js';
 import { getRecentLogs } from '../data/syncLog.js';
-import { getLastPublicIp, getLastPollTime } from '../scheduler.js';
+import { getLastPublicIpV4, getLastPublicIpV6, getLastPollTime } from '../scheduler.js';
+import { getSetting } from '../data/settings.js';
 
 const router = Router();
 
@@ -15,9 +16,13 @@ router.get('/status', (req, res) => {
       last_checked_at: r.last_checked_at,
     }));
     const recentLogs = getRecentLogs(20);
+    const pollInterval = parseInt(getSetting('poll_interval', process.env.POLL_INTERVAL || '300'), 10);
+    
     res.json({
-      publicIp: getLastPublicIp(),
+      publicIpV4: getLastPublicIpV4(),
+      publicIpV6: getLastPublicIpV6(),
       lastPollTime: getLastPollTime(),
+      pollInterval,
       records,
       recentLogs,
     });

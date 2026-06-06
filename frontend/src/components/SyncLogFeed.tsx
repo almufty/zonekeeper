@@ -1,7 +1,16 @@
 import type { SyncLog } from '../types'
 import StatusBadge from './StatusBadge'
+
+function parseDate(ts: string) {
+  if (!ts) return new Date()
+  if (!ts.includes('Z') && !ts.includes('+')) {
+    return new Date(ts.replace(' ', 'T') + 'Z')
+  }
+  return new Date(ts)
+}
+
 function relTime(ts: string) {
-  const diff = Date.now() - new Date(ts).getTime()
+  const diff = Date.now() - parseDate(ts).getTime()
   if (diff < 60000) return `${Math.round(diff / 1000)}s ago`
   if (diff < 3600000) return `${Math.round(diff / 60000)}m ago`
   return `${Math.round(diff / 3600000)}h ago`

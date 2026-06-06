@@ -88,3 +88,17 @@ export const getRecordLog  = (id: number) => req<SyncLog[]>('GET', `/api/records
 // Sync / Status
 export const syncAll   = () => req<{ results: (SyncResult & { record_id: number; record_name: string })[] }>('POST', '/api/sync');
 export const getStatus = () => req<StatusResponse>('GET', '/api/status');
+
+// Settings
+export interface SystemSettings {
+  poll_interval: number;
+  log_retention_days: number;
+  discord_webhook_url: string;
+  telegram_bot_token: string;
+  telegram_chat_id: string;
+  notify_on_success: boolean;
+  notify_on_error: boolean;
+}
+export const getSettings = () => req<SystemSettings>('GET', '/api/settings');
+export const updateSettings = (data: Partial<SystemSettings>) => req<{ ok: boolean }>('PUT', '/api/settings', data);
+

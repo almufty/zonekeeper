@@ -4,8 +4,11 @@ import rateLimit from 'express-rate-limit';
 import { getUserByUsername, verifyPassword, updatePassword } from '../data/users.js';
 import { requireAuth } from '../middleware/requireAuth.js';
 import { refreshCsrfToken } from '../middleware/csrfProtect.js';
+import { sendNotification } from '../lib/notifier.js';
 
 const router = Router();
+const loginFailures = new Map();
+const lockedIps = new Map();
 
 // CRITICAL-1 fix: rate-limit login attempts — 10 per 15 minutes per IP
 const loginLimiter = rateLimit({
@@ -27,11 +30,44 @@ router.post('/auth/login', loginLimiter, async (req, res) => {
     return res.status(400).json({ error: 'Username and password required' });
   }
 
+  const ip = req.ip || req.socket.remoteAddress;
+  const now = Date.now();
+
+  if (lockedIps.has(ip)) {
+    const expiry = lockedIps.get(ip);
+    if (now < expiry) {
+      const remaining = Math.ceil((expiry - now) / 1000 / 60);
+      return res.status(403).json({ error: `Too many failed login attempts. Locked out for ${remaining} minute(s).` });
+    } else {
+      lockedIps.delete(ip);
+    }
+  }
+
   const user = getUserByUsername(username);
   const valid = user && await verifyPassword(password, user.password_hash);
   if (!valid) {
+    let failures = loginFailures.get(ip) || [];
+    failures = failures.filter(t => now - t < 5 * 60 * 1000);
+    failures.push(now);
+    loginFailures.set(ip, failures);
+
+    // Failed login notification
+    const alertMsg = `⚠️ **Failed login attempt**\n• IP: \`${ip}\`\n• Username: \`${username}\``;
+    sendNotification(alertMsg).catch(err => console.error('Failed to send login alert:', err.message));
+
+    if (failures.length >= 5) {
+      lockedIps.set(ip, now + 5 * 60 * 1000);
+      loginFailures.delete(ip);
+      const lockoutMsg = `🚨 **IP Locked Out**\n• IP: \`${ip}\` has been locked out for 5 minutes due to 5 failed login attempts.`;
+      sendNotification(lockoutMsg).catch(err => console.error('Failed to send lockout alert:', err.message));
+      return res.status(403).json({ error: 'Too many failed login attempts. Locked out for 5 minutes.' });
+    }
+
     return res.status(401).json({ error: 'Invalid credentials' });
   }
+
+  // Clear failures on successful login
+  loginFailures.delete(ip);
 
   req.session.regenerate((err) => {
     if (err) return res.status(500).json({ error: 'Session error' });

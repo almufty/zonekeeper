@@ -47,8 +47,15 @@ export default function Layout() {
           </button>
         </div>
       </aside>
-      <main style={{ flex: 1, overflowY: 'auto', padding: 32, background: '#0d0d0f' }}>
-        <Outlet />
+      <main style={{ flex: 1, overflowY: 'auto', padding: 32, background: '#0d0d0f', position: 'relative' }}>
+        {/* Subtle grid background */}
+        <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(circle, #1e1e26 1px, transparent 1px)', backgroundSize: '32px 32px', opacity: 0.4, pointerEvents: 'none' }} />
+        {/* Glowing spotlight in top right */}
+        <div style={{ position: 'absolute', top: 0, right: 0, width: '400px', height: '400px', background: 'radial-gradient(circle, rgba(251,191,36,0.03) 0%, transparent 70%)', pointerEvents: 'none' }} />
+        
+        <div style={{ position: 'relative', zIndex: 1 }}>
+          <Outlet />
+        </div>
       </main>
     </div>
   )

@@ -1,5 +1,6 @@
 import { NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import Logo from './Logo'
 
 const NAV = [
   { to: '/',         label: '// 0x00 dashboard' },
@@ -15,7 +16,8 @@ export default function Layout() {
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#0d0d0f' }}>
       <aside style={{ width: 220, minWidth: 220, background: '#111115', borderRight: '1px solid #252530', display: 'flex', flexDirection: 'column', padding: '24px 0' }}>
-        <div style={{ padding: '0 20px 24px', borderBottom: '1px solid #252530', marginBottom: 8 }}>
+        <div style={{ padding: '0 20px 24px', borderBottom: '1px solid #252530', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 12 }}>
+          <Logo size={48} />
           <span style={{ color: '#fbbf24', fontFamily: 'monospace', fontSize: 15, fontWeight: 600 }}>// zonekeeper</span>
         </div>
         <nav style={{ display: 'flex', flexDirection: 'column', padding: '8px 12px', gap: 4, flex: 1 }}>

@@ -5,38 +5,10 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="c2c687b6-f718-4e64-99b3-1a27751977c4" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/audit.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/lib/crypto.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/lib/logger.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/middleware/csrfProtect.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/test/lib/cloudflare.test.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/test/lib/crypto.test.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/test/lib/ipResolver.test.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/test/middleware/basicAuth.test.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/test/middleware/csrfProtect.test.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/vitest.config.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.env.example" beforeDir="false" afterPath="$PROJECT_DIR$/.env.example" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/data/accounts.js" beforeDir="false" afterPath="$PROJECT_DIR$/data/accounts.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/data/records.js" beforeDir="false" afterPath="$PROJECT_DIR$/data/records.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/data/syncLog.js" beforeDir="false" afterPath="$PROJECT_DIR$/data/syncLog.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/db.js" beforeDir="false" afterPath="$PROJECT_DIR$/db.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/api.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/api.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/components/MaskedKey.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/MaskedKey.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/contexts/AuthContext.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/contexts/AuthContext.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Accounts.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Accounts.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/cloudflare.js" beforeDir="false" afterPath="$PROJECT_DIR$/lib/cloudflare.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/ipResolver.js" beforeDir="false" afterPath="$PROJECT_DIR$/lib/ipResolver.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/middleware/basicAuth.js" beforeDir="false" afterPath="$PROJECT_DIR$/middleware/basicAuth.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/package-lock.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/package.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/routes/accounts.js" beforeDir="false" afterPath="$PROJECT_DIR$/routes/accounts.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/routes/auth.js" beforeDir="false" afterPath="$PROJECT_DIR$/routes/auth.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/routes/records.js" beforeDir="false" afterPath="$PROJECT_DIR$/routes/records.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/routes/zones.js" beforeDir="false" afterPath="$PROJECT_DIR$/routes/zones.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/scheduler.js" beforeDir="false" afterPath="$PROJECT_DIR$/scheduler.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/server.js" beforeDir="false" afterPath="$PROJECT_DIR$/server.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/Layout.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/Layout.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/Login.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/Login.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/tsconfig.app.tsbuildinfo" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/tsconfig.app.tsbuildinfo" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -94,7 +66,7 @@
       <workItem from="1780641897406" duration="8000" />
       <workItem from="1780642176530" duration="4337000" />
       <workItem from="1780743868699" duration="687000" />
-      <workItem from="1780745310381" duration="5850000" />
+      <workItem from="1780745310381" duration="6470000" />
     </task>
     <servers />
   </component>

@@ -1,12 +1,18 @@
 import db from '../db.js';
+import { decryptApiKey } from '../lib/crypto.js';
 
 function rowToRecord(row) {
   if (!row) return null;
-  return {
+  const record = {
     ...row,
     proxied: row.proxied === 1,
     enabled: row.enabled === 1,
   };
+  // Decrypt auth_key when present (from listEnabledRecords JOIN)
+  if (record.auth_key) {
+    record.auth_key = decryptApiKey(record.auth_key);
+  }
+  return record;
 }
 
 export function listRecords(zoneId) {
@@ -17,7 +23,7 @@ export function listRecords(zoneId) {
 }
 
 export function getRecord(id) {
-  return rowToRecord(db.prepare('SELECT * FROM records WHERE id = ?').get(id) || null);
+  return rowToRecord(db.prepare('SELECT * FROM records WHERE id = ?').get(id) ?? null);
 }
 
 export function createRecord({ zone_id, record_name, record_type = 'A', ttl = 3600, proxied = false, enabled = true, cloudflare_record_id = null }) {

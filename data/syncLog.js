@@ -21,3 +21,11 @@ export function getRecentLogs(limit = 20) {
     LIMIT ?
   `).all(limit);
 }
+
+// MEDIUM-10: prune old log entries to prevent unbounded table growth
+export function pruneOldLogs(retentionDays = 30) {
+  const result = db.prepare(
+    `DELETE FROM sync_log WHERE timestamp < datetime('now', ? || ' days')`
+  ).run(`-${retentionDays}`);
+  return result.changes;
+}

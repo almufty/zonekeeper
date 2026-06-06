@@ -7,20 +7,23 @@ A self-hosted web app that replaces per-domain DDNS bash scripts with a single u
 ## Features
 
 - Manage multiple Cloudflare accounts (Global API Key or API Token)
-- Add any number of zones and A records per account
-- Automatic IP sync on a configurable interval (default 5 min)
+- Add any number of zones and A/AAAA records per account
+- Automatic IP sync on a configurable interval (default 5 min, minimum 60 s)
 - Force-sync individual records or all records at once
 - Per-record sync history with status badges (updated / unchanged / error)
 - Dashboard with live public IP, last-poll time, and recent activity feed
-- Optional HTTP Basic Auth to password-protect the UI
+- Optional HTTP Basic Auth for an additional network-level barrier
+- AES-256-GCM encryption for stored Cloudflare API credentials
 - Single SQLite file — no external database
 
 ---
 
 ## Requirements
 
-- **Node.js ≥ 22** (uses the built-in `node:sqlite` module, available since Node 22)
+- **Node.js ≥ 22**
 - npm
+
+> **Note:** The backend uses [`better-sqlite3`](https://github.com/WiseLibs/better-sqlite3), not the experimental built-in `node:sqlite` module.
 
 ---
 
@@ -28,18 +31,18 @@ A self-hosted web app that replaces per-domain DDNS bash scripts with a single u
 
 ```bash
 # 1. Clone
-git clone https://github.com/your-user/cloudflare-ddns-updater.git
-cd cloudflare-ddns-updater
+git clone https://github.com/your-user/zonekeeper-ddns.git
+cd zonekeeper-ddns
 
-# 2. Install dependencies
+# 2. Install all dependencies (backend + frontend)
 npm run install:all
 
 # 3. Configure
 cp .env.example .env
-$EDITOR .env
+$EDITOR .env          # set SESSION_SECRET and ENCRYPTION_KEY at minimum
 
 # 4. Build the frontend
-npm run build
+npm run build         # outputs to frontend/dist/
 
 # 5. Start
 npm start
@@ -54,17 +57,26 @@ npm start
 |---|---|---|
 | `PORT` | `3000` | HTTP port the server listens on |
 | `DB_PATH` | `./zonekeeper.db` | Path to the SQLite database file |
-| `POLL_INTERVAL` | `300` | Sync interval in **seconds** |
-| `AUTH_USER` | *(empty)* | Basic auth username — leave blank to disable auth |
-| `AUTH_PASS` | *(empty)* | Basic auth password — leave blank to disable auth |
+| `POLL_INTERVAL` | `300` | Sync interval in **seconds** (minimum 60) |
+| `LOG_RETENTION_DAYS` | `30` | Days of sync history to keep |
+| `SESSION_SECRET` | *(required in prod)* | Secret for signing session cookies |
+| `ENCRYPTION_KEY` | *(strongly recommended)* | 64-char hex key for encrypting stored API credentials |
+| `ADMIN_USER` | `admin` | Username for first-run admin account |
+| `ADMIN_PASS` | *(auto-generated)* | Password for first-run admin account |
+| `AUTH_USER` | *(empty)* | HTTP Basic Auth username — both must be set to enable |
+| `AUTH_PASS` | *(empty)* | HTTP Basic Auth password |
+| `LOG_LEVEL` | `info` | Log level: `error` \| `warn` \| `info` \| `debug` |
 
-Both `AUTH_USER` **and** `AUTH_PASS` must be set to enable authentication. If either is empty, the UI is accessible without credentials.
+### Generating secrets
+
+```bash
+# SESSION_SECRET and ENCRYPTION_KEY — 64 random hex chars each
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
 
 ---
 
 ## Development
-
-Run backend and frontend dev servers in separate terminals:
 
 ```bash
 # Terminal 1 — backend with file-watch reload
@@ -78,7 +90,16 @@ npm run dev:frontend
 To rebuild the frontend for production:
 
 ```bash
-npm run build   # outputs to backend/public/
+npm run build   # outputs to frontend/dist/
+```
+
+---
+
+## Testing
+
+```bash
+npm test          # run tests once
+npm run test:watch   # watch mode
 ```
 
 ---
@@ -87,7 +108,7 @@ npm run build   # outputs to backend/public/
 
 **Global API Key** — found at [dash.cloudflare.com/profile/api-tokens](https://dash.cloudflare.com/profile/api-tokens) under "Global API Key". Use your account email as the email field.
 
-**API Token** — create a token with `Zone › DNS › Edit` permissions scoped to the zones you want to manage. Leave the email field as the account email (still required for the `X-Auth-Email` header).
+**API Token** — create a token with `Zone › DNS › Edit` permissions scoped to the zones you want to manage.
 
 Use the **Verify** button on the Accounts page to confirm credentials and browse your Cloudflare zones before adding records.
 
@@ -108,7 +129,7 @@ Wants=network-online.target
 [Service]
 Type=simple
 User=zonekeeper
-WorkingDirectory=/opt/zonekeeper/backend
+WorkingDirectory=/opt/zonekeeper
 EnvironmentFile=/opt/zonekeeper/.env
 ExecStart=/usr/bin/node server.js
 Restart=on-failure
@@ -124,20 +145,17 @@ sudo systemctl enable --now zonekeeper
 
 ### Docker (unofficial)
 
-No official image is published. A minimal Dockerfile:
-
 ```dockerfile
 FROM node:22-alpine
 WORKDIR /app
-COPY backend/package.json .
-RUN npm install --production
-COPY backend/ .
-COPY backend/public/ public/
+COPY package*.json ./
+RUN npm install --omit=dev
+COPY . .
 EXPOSE 3000
 CMD ["node", "server.js"]
 ```
 
-Build the frontend first (`npm run build`), then build the image. Pass env vars via `--env-file` or `-e` flags at runtime. Mount a host volume for the database so it persists across container restarts:
+Build the frontend first (`npm run build`), then build the image. Pass env vars via `--env-file` and mount a volume for the database:
 
 ```bash
 docker run -d \
@@ -152,7 +170,7 @@ docker run -d \
 
 ## Data
 
-The SQLite database (`zonekeeper.db`) stores all accounts, zones, records, and sync history. Back it up by copying the file while the server is idle, or use SQLite's online backup:
+The SQLite database (`zonekeeper.db`) stores all accounts, zones, records, and sync history. Cloudflare API keys are encrypted at rest using AES-256-GCM when `ENCRYPTION_KEY` is configured. Back up the database by copying the file:
 
 ```bash
 sqlite3 zonekeeper.db ".backup zonekeeper-backup.db"

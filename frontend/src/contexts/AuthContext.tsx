@@ -17,7 +17,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    getMe().then(u => { setUser(u); setLoading(false) })
+    // MEDIUM-2 fix: handle rejection so loading never gets stuck
+    getMe()
+      .then(u => setUser(u))
+      .catch(() => setUser(null))
+      .finally(() => setLoading(false))
   }, [])
 
   const login = useCallback(async (username: string, password: string) => {

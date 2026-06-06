@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { Account, CfZone } from '../types'
-import { getAccounts, createAccount, updateAccount, deleteAccount, verifyAccount } from '../api'
+import { getAccounts, createAccount, updateAccount, deleteAccount, verifyAccount, getAccountKey } from '../api'
 import MaskedKey from '../components/MaskedKey'
 import ConfirmDialog from '../components/ConfirmDialog'
 
@@ -28,14 +28,21 @@ export default function Accounts() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault(); setErr(null)
     try {
-      if (editing != null) await updateAccount(editing, form)
-      else await createAccount(form)
+      if (editing != null) {
+        // HIGH-4: only send auth_key if the user typed a new one; empty = keep existing
+        const fields: Partial<FormState> = { name: form.name, auth_email: form.auth_email, auth_method: form.auth_method }
+        if (form.auth_key !== '') fields.auth_key = form.auth_key
+        await updateAccount(editing, fields)
+      } else {
+        await createAccount(form)
+      }
       setForm(EMPTY); setShowForm(false); setEditing(null); load()
     } catch (e) { setErr((e as Error).message) }
   }
 
   const handleEdit = (a: Account) => {
-    setForm({ name: a.name, auth_email: a.auth_email, auth_method: a.auth_method, auth_key: a.auth_key })
+    // auth_key is not included in list responses — leave blank; backend keeps existing if not changed
+    setForm({ name: a.name, auth_email: a.auth_email, auth_method: a.auth_method, auth_key: '' })
     setEditing(a.id); setShowForm(true)
   }
 
@@ -49,6 +56,12 @@ export default function Accounts() {
     setVerifying(id); setZones(null); setZonesFor(id); setErr(null)
     try { setZones(await verifyAccount(id)) } catch (e) { setErr((e as Error).message) }
     finally { setVerifying(null) }
+  }
+
+  // HIGH-4: fetch the key on demand via the dedicated endpoint
+  const handleRevealKey = async (id: number): Promise<string> => {
+    const { auth_key } = await getAccountKey(id)
+    return auth_key
   }
 
   return (
@@ -67,7 +80,13 @@ export default function Accounts() {
             <option value="global">Global API Key</option>
             <option value="token">API Token</option>
           </select>
-          <input style={input} placeholder={form.auth_method === 'global' ? 'Global API Key' : 'Bearer Token'} value={form.auth_key} onChange={e => setForm(f => ({ ...f, auth_key: e.target.value }))} required />
+          <input
+            style={input}
+            placeholder={editing ? 'New API key (leave blank to keep existing)' : (form.auth_method === 'global' ? 'Global API Key' : 'Bearer Token')}
+            value={form.auth_key}
+            onChange={e => setForm(f => ({ ...f, auth_key: e.target.value }))}
+            required={editing == null}
+          />
           <button type="submit" style={btn()}>save</button>
         </form>
       )}
@@ -81,7 +100,7 @@ export default function Accounts() {
                 <div style={{ color: '#9ca3af', fontSize: 12, marginBottom: 6 }}>{a.auth_email}</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span style={{ color: '#6b7280', fontSize: 11, padding: '2px 6px', border: '1px solid #252530', borderRadius: 4 }}>{a.auth_method}</span>
-                  <MaskedKey value={a.auth_key} />
+                  <MaskedKey accountId={a.id} onReveal={handleRevealKey} />
                 </div>
               </div>
               <div style={{ display: 'flex', gap: 8 }}>

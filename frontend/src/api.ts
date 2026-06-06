@@ -1,9 +1,18 @@
 import type { Account, Zone, CfZone, CfDnsRecord, DnsRecord, SyncLog, StatusResponse, SyncResult } from './types';
 
+// HIGH-1 fix: module-level CSRF token — populated from login/me responses
+let csrfToken = '';
+
 async function req<T>(method: string, path: string, body?: unknown): Promise<T> {
+  const headers: Record<string, string> = {};
+  if (body) headers['Content-Type'] = 'application/json';
+  // Include CSRF token on all state-mutating requests
+  if (method !== 'GET' && method !== 'HEAD' && csrfToken) {
+    headers['X-CSRF-Token'] = csrfToken;
+  }
   const res = await fetch(path, {
     method,
-    headers: body ? { 'Content-Type': 'application/json' } : {},
+    headers,
     body: body ? JSON.stringify(body) : undefined,
   });
   if (res.status === 401) {
@@ -22,7 +31,10 @@ async function req<T>(method: string, path: string, body?: unknown): Promise<T> 
 export async function getMe(): Promise<{ username: string } | null> {
   const res = await fetch('/api/auth/me');
   if (!res.ok) return null;
-  return res.json();
+  const data = await res.json();
+  // Store CSRF token returned by the server
+  if (data.csrfToken) csrfToken = data.csrfToken;
+  return { username: data.username };
 }
 
 export async function login(username: string, password: string): Promise<{ username: string }> {
@@ -35,7 +47,10 @@ export async function login(username: string, password: string): Promise<{ usern
     const err = await res.json().catch(() => ({ error: res.statusText }));
     throw new Error((err as { error?: string }).error || 'Login failed');
   }
-  return res.json();
+  const data = await res.json();
+  // Store CSRF token from fresh session
+  if (data.csrfToken) csrfToken = data.csrfToken;
+  return { username: data.username };
 }
 
 export const logout = () => req<{ ok: boolean }>('POST', '/api/auth/logout');
@@ -44,7 +59,9 @@ export const changePassword = (currentPassword: string, newPassword: string) =>
 
 // Accounts
 export const getAccounts = () => req<Account[]>('GET', '/api/accounts');
-export const getAccount = (id: number) => req<Account>('GET', `/api/accounts/${id}`);
+export const getAccount  = (id: number) => req<Account>('GET', `/api/accounts/${id}`);
+// HIGH-4: dedicated call that fetches the decrypted key on demand
+export const getAccountKey = (id: number) => req<{ auth_key: string }>('GET', `/api/accounts/${id}/key`);
 export const createAccount = (data: Omit<Account, 'id' | 'created_at'>) => req<Account>('POST', '/api/accounts', data);
 export const updateAccount = (id: number, data: Partial<Omit<Account, 'id' | 'created_at'>>) => req<Account>('PUT', `/api/accounts/${id}`, data);
 export const deleteAccount = (id: number) => req<void>('DELETE', `/api/accounts/${id}`);
@@ -60,14 +77,14 @@ export const createZone = (data: { account_id: number; zone_identifier: string; 
 export const deleteZone = (id: number) => req<void>('DELETE', `/api/zones/${id}`);
 
 // Records
-export const getRecords = (zoneId?: number) =>
+export const getRecords    = (zoneId?: number) =>
   req<DnsRecord[]>('GET', zoneId != null ? `/api/records?zoneId=${zoneId}` : '/api/records');
-export const createRecord = (data: Partial<DnsRecord>) => req<DnsRecord>('POST', '/api/records', data);
-export const updateRecord = (id: number, data: Partial<DnsRecord>) => req<DnsRecord>('PUT', `/api/records/${id}`, data);
-export const deleteRecord = (id: number) => req<void>('DELETE', `/api/records/${id}`);
-export const syncRecord = (id: number) => req<SyncResult>('POST', `/api/records/${id}/sync`);
-export const getRecordLog = (id: number) => req<SyncLog[]>('GET', `/api/records/${id}/log`);
+export const createRecord  = (data: Partial<DnsRecord>) => req<DnsRecord>('POST', '/api/records', data);
+export const updateRecord  = (id: number, data: Partial<DnsRecord>) => req<DnsRecord>('PUT', `/api/records/${id}`, data);
+export const deleteRecord  = (id: number) => req<void>('DELETE', `/api/records/${id}`);
+export const syncRecord    = (id: number) => req<SyncResult>('POST', `/api/records/${id}/sync`);
+export const getRecordLog  = (id: number) => req<SyncLog[]>('GET', `/api/records/${id}/log`);
 
 // Sync / Status
-export const syncAll = () => req<{ results: (SyncResult & { record_id: number; record_name: string })[] }>('POST', '/api/sync');
+export const syncAll   = () => req<{ results: (SyncResult & { record_id: number; record_name: string })[] }>('POST', '/api/sync');
 export const getStatus = () => req<StatusResponse>('GET', '/api/status');

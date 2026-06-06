@@ -1,13 +1,16 @@
 import { resolvePublicIp } from './lib/ipResolver.js';
 import { getDnsRecord, updateDnsRecord } from './lib/cloudflare.js';
 import { listEnabledRecords, updateRecord } from './data/records.js';
-import { insertLog } from './data/syncLog.js';
+import { insertLog, pruneOldLogs } from './data/syncLog.js';
+import { logger } from './lib/logger.js';
 
-let lastPublicIp = null;
-let lastPollTime = null;
+let lastPublicIp  = null;
+let lastPollTime  = null;
+// MEDIUM-7 fix: mutex prevents concurrent syncAll runs (scheduler + manual trigger)
+let syncRunning   = false;
 
-export function getLastPublicIp() { return lastPublicIp; }
-export function getLastPollTime() { return lastPollTime; }
+export function getLastPublicIp()  { return lastPublicIp; }
+export function getLastPollTime()  { return lastPollTime; }
 
 export async function syncRecord(record) {
   let publicIp;
@@ -37,14 +40,13 @@ export async function syncRecord(record) {
     return { status: 'error', message: msg };
   }
 
-  // Cache the Cloudflare record ID after first successful lookup
   if (!record.cloudflare_record_id) {
     updateRecord(record.id, { cloudflare_record_id: cfRecord.id });
     record = { ...record, cloudflare_record_id: cfRecord.id };
   }
 
   const oldIp = cfRecord.content;
-  const now = new Date().toISOString();
+  const now   = new Date().toISOString();
 
   if (publicIp === oldIp) {
     insertLog({ record_id: record.id, old_ip: oldIp, new_ip: publicIp, status: 'unchanged', message: 'IP unchanged' });
@@ -71,30 +73,54 @@ export async function syncRecord(record) {
 }
 
 export async function syncAll() {
-  let publicIp = null;
-  try {
-    publicIp = await resolvePublicIp();
-    lastPublicIp = publicIp;
-  } catch (err) {
-    console.error('[scheduler] Could not resolve public IP:', err.message);
+  // MEDIUM-7: prevent overlapping sync runs
+  if (syncRunning) {
+    logger.warn({ event: 'scheduler.skipped' }, 'syncAll skipped — previous run still in progress');
+    return [];
   }
-  lastPollTime = new Date().toISOString();
+  syncRunning = true;
 
-  const records = listEnabledRecords();
-  const results = [];
-  for (const record of records) {
-    const result = await syncRecord(record);
-    results.push({ record_id: record.id, record_name: record.record_name, ...result });
+  try {
+    let publicIp = null;
+    try {
+      publicIp = await resolvePublicIp();
+      lastPublicIp = publicIp;
+    } catch (err) {
+      logger.error({ event: 'scheduler.ip.fail', err: err.message }, 'Could not resolve public IP');
+    }
+    lastPollTime = new Date().toISOString();
+
+    const records = listEnabledRecords();
+    const results = [];
+    for (const record of records) {
+      const result = await syncRecord(record);
+      results.push({ record_id: record.id, record_name: record.record_name, ...result });
+    }
+
+    // MEDIUM-10: prune old log entries after each cycle
+    const retention = parseInt(process.env.LOG_RETENTION_DAYS || '30', 10);
+    const pruned = pruneOldLogs(retention);
+    if (pruned > 0) {
+      logger.debug({ event: 'scheduler.prune', pruned }, `Pruned ${pruned} old log entries`);
+    }
+
+    return results;
+  } finally {
+    syncRunning = false;
   }
-  return results;
 }
 
 export function startScheduler() {
-  const intervalSec = parseInt(process.env.POLL_INTERVAL || '300', 10);
-  console.log(`[scheduler] Starting poll every ${intervalSec}s`);
-  // Run once immediately on startup
-  syncAll().catch(err => console.error('[scheduler] Initial sync error:', err.message));
+  // HIGH-6 fix: validate and clamp POLL_INTERVAL to a minimum of 60 seconds
+  const raw = parseInt(process.env.POLL_INTERVAL || '300', 10);
+  if (!Number.isFinite(raw) || raw < 60) {
+    throw new Error(`POLL_INTERVAL must be a number >= 60 (got "${process.env.POLL_INTERVAL}"). Refusing to start to prevent API rate-limit flooding.`);
+  }
+  const intervalSec = raw;
+  logger.info({ event: 'scheduler.start', intervalSec }, `Scheduler starting — polling every ${intervalSec}s`);
+
+  syncAll().catch(err => logger.error({ event: 'scheduler.init.error', err: err.message }, 'Initial sync error'));
   setInterval(() => {
-    syncAll().catch(err => console.error('[scheduler] Sync error:', err.message));
+    syncAll().catch(err => logger.error({ event: 'scheduler.error', err: err.message }, 'Sync error'));
   }, intervalSec * 1000);
 }

@@ -2,6 +2,12 @@ import { useEffect, useState } from 'react'
 
 export const CURRENT_VERSION = '1.0.0'
 
+function normalize(v: string): string {
+  const parts = v.split('.').map(s => parseInt(s, 10))
+  while (parts.length < 3) parts.push(0)
+  return parts.join('.')
+}
+
 interface VersionState {
   current: string
   latest: string | null
@@ -38,7 +44,7 @@ export function useVersionCheck(): VersionState {
           latest,
           releaseName: data.name || `v${latest}`,
           changelog: data.body || null,
-          hasUpdate: latest !== CURRENT_VERSION,
+          hasUpdate: normalize(latest) !== normalize(CURRENT_VERSION),
           releaseUrl: data.html_url,
           loading: false,
         })

@@ -31,7 +31,7 @@ app.use(helmet({
       scriptSrc:   ["'self'"],
       styleSrc:    ["'self'", "'unsafe-inline'"],
       imgSrc:      ["'self'", 'data:'],
-      connectSrc:  ["'self'"],
+      connectSrc:  ["'self'", 'https://api.github.com'],
       fontSrc:     ["'self'"],
       frameSrc:    ["'none'"],
       objectSrc:   ["'none'"],

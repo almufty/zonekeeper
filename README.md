@@ -2,9 +2,28 @@
   <img src="frontend/public/logo.png" alt="Zonekeeper Logo" width="120" height="120" />
 </p>
 
-# Zonekeeper — Cloudflare DDNS Manager
+<h1 align="center">Zonekeeper — Cloudflare DDNS Manager</h1>
 
-A self-hosted web application that replaces multiple custom DDNS bash scripts with a single, secure, and unified service. Manage and monitor all of your Cloudflare DNS zones from a single dashboard, with an automated scheduler keeping them in sync with your public IP.
+<p align="center">
+  <img src="https://img.shields.io/badge/version-1.0.1-818cf8?style=flat-square" alt="Version" />
+  <img src="https://img.shields.io/badge/license-GPL--3.0-34d399?style=flat-square" alt="License" />
+  <img src="https://img.shields.io/badge/node-%3E%3D22-fbbf24?style=flat-square" alt="Node.js" />
+  <img src="https://img.shields.io/badge/docker-ready-60a5fa?style=flat-square" alt="Docker" />
+</p>
+
+<p align="center">
+  A self-hosted web application that replaces multiple custom DDNS bash scripts with a single, secure, and unified service. Manage and monitor all of your Cloudflare DNS zones from a single dashboard, with an automated scheduler keeping them in sync with your public IP.
+</p>
+
+---
+
+## Screenshots
+
+<p align="center">
+  <img src="docs/Dashboard.png" alt="Zonekeeper Dashboard" width="100%" />
+  <br/><br/>
+  <img src="docs/LoginScreen.png" alt="Zonekeeper Login" width="100%" />
+</p>
 
 ---
 
@@ -83,7 +102,7 @@ The easiest way to run Zonekeeper in production is using Docker Compose.
 ### Setup Steps
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/your-user/zonekeeper-ddns.git
+   git clone https://github.com/almufty/zonekeeper.git
    cd zonekeeper-ddns
    ```
 

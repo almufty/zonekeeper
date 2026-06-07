@@ -1,14 +1,37 @@
 import { Router } from 'express';
 import { randomBytes } from 'crypto';
+import bcrypt from 'bcryptjs';
 import rateLimit from 'express-rate-limit';
 import { getUserByUsername, verifyPassword, updatePassword } from '../data/users.js';
 import { requireAuth } from '../middleware/requireAuth.js';
-import { refreshCsrfToken } from '../middleware/csrfProtect.js';
+import { refreshCsrfToken, csrfProtect } from '../middleware/csrfProtect.js';
 import { sendNotification } from '../lib/notifier.js';
+import { logger } from '../lib/logger.js';
 
 const router = Router();
 const loginFailures = new Map();
 const lockedIps = new Map();
+
+// M-2 fix: a fixed dummy hash so a login for a non-existent user still performs a
+// bcrypt comparison, equalizing response time and preventing username enumeration.
+const DUMMY_HASH = bcrypt.hashSync('zonekeeper-timing-equalizer', 12);
+
+const FAILURE_WINDOW_MS = 5 * 60 * 1000;
+const LOCKOUT_MS = 5 * 60 * 1000;
+
+// M-4 fix: periodically evict stale lockout/failure entries so the maps can't grow
+// unbounded under a spray of distinct source IPs.
+const SWEEP_INTERVAL_MS = 10 * 60 * 1000;
+const sweepTimer = setInterval(() => {
+  const now = Date.now();
+  for (const [ip, expiry] of lockedIps) {
+    if (now >= expiry) lockedIps.delete(ip);
+  }
+  for (const [ip, times] of loginFailures) {
+    if (times.every(t => now - t >= FAILURE_WINDOW_MS)) loginFailures.delete(ip);
+  }
+}, SWEEP_INTERVAL_MS);
+sweepTimer.unref?.();
 
 // CRITICAL-1 fix: rate-limit login attempts — 10 per 15 minutes per IP
 const loginLimiter = rateLimit({
@@ -17,6 +40,16 @@ const loginLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many login attempts — try again later.' },
+});
+
+// L-1 fix: throttle password-change attempts so a hijacked session can't brute-force
+// the current password.
+const changePasswordLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many password-change attempts — try again later.' },
 });
 
 // Password complexity: >= 12 chars, at least one upper, lower, and digit
@@ -44,22 +77,25 @@ router.post('/auth/login', loginLimiter, async (req, res) => {
   }
 
   const user = getUserByUsername(username);
-  const valid = user && await verifyPassword(password, user.password_hash);
+  // M-2 fix: always run a bcrypt comparison (against a dummy hash when the user is
+  // missing) so timing does not reveal whether the username exists.
+  const passwordMatches = await verifyPassword(password, user ? user.password_hash : DUMMY_HASH);
+  const valid = !!user && passwordMatches;
   if (!valid) {
     let failures = loginFailures.get(ip) || [];
-    failures = failures.filter(t => now - t < 5 * 60 * 1000);
+    failures = failures.filter(t => now - t < FAILURE_WINDOW_MS);
     failures.push(now);
     loginFailures.set(ip, failures);
 
     // Failed login notification
     const alertMsg = `⚠️ **Failed login attempt**\n• IP: \`${ip}\`\n• Username: \`${username}\``;
-    sendNotification(alertMsg).catch(err => console.error('Failed to send login alert:', err.message));
+    sendNotification(alertMsg).catch(err => logger.error({ event: 'auth.alert.fail', err: err.message }, 'Failed to send login alert'));
 
     if (failures.length >= 5) {
-      lockedIps.set(ip, now + 5 * 60 * 1000);
+      lockedIps.set(ip, now + LOCKOUT_MS);
       loginFailures.delete(ip);
       const lockoutMsg = `🚨 **IP Locked Out**\n• IP: \`${ip}\` has been locked out for 5 minutes due to 5 failed login attempts.`;
-      sendNotification(lockoutMsg).catch(err => console.error('Failed to send lockout alert:', err.message));
+      sendNotification(lockoutMsg).catch(err => logger.error({ event: 'auth.alert.fail', err: err.message }, 'Failed to send lockout alert'));
       return res.status(403).json({ error: 'Too many failed login attempts. Locked out for 5 minutes.' });
     }
 
@@ -79,12 +115,12 @@ router.post('/auth/login', loginLimiter, async (req, res) => {
   });
 });
 
-router.post('/auth/logout', (req, res) => {
+router.post('/auth/logout', requireAuth, csrfProtect, (req, res) => {
   // LOW-4 fix: handle destroy errors
   req.session.destroy((err) => {
     if (err) {
       // Log but don't surface to client — still clear the cookie
-      console.error('[auth] Session destroy error:', err.message);
+      logger.error({ event: 'auth.logout.destroy', err: err.message }, 'Session destroy error');
     }
     res.clearCookie('zkid');
     res.json({ ok: true });
@@ -98,7 +134,7 @@ router.get('/auth/me', (req, res) => {
   res.json({ username: req.session.username, csrfToken: req.session.csrfToken });
 });
 
-router.post('/auth/change-password', requireAuth, async (req, res) => {
+router.post('/auth/change-password', changePasswordLimiter, requireAuth, csrfProtect, async (req, res) => {
   const { currentPassword, newPassword } = req.body;
   if (!currentPassword || !newPassword) {
     return res.status(400).json({ error: 'Both passwords required' });

@@ -50,6 +50,25 @@ db.exec(`
     value TEXT NOT NULL
   );
 
+  -- Base records table. Previously this only existed inside the migration block
+  -- below, so a brand-new database crashed on init ("no such table: records").
+  -- Created here with the desired CHECK constraints; the migration block only
+  -- runs for legacy databases whose records table predates those constraints.
+  CREATE TABLE IF NOT EXISTS records (
+    id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+    zone_id              INTEGER NOT NULL REFERENCES zones(id) ON DELETE CASCADE,
+    record_name          TEXT NOT NULL,
+    record_type          TEXT NOT NULL DEFAULT 'A' CHECK(record_type IN ('A', 'AAAA')),
+    ttl                  INTEGER NOT NULL DEFAULT 3600 CHECK(ttl = 1 OR (ttl >= 60 AND ttl <= 86400)),
+    proxied              INTEGER NOT NULL DEFAULT 0,
+    enabled              INTEGER NOT NULL DEFAULT 1,
+    last_ip              TEXT,
+    last_checked_at      TEXT,
+    last_status          TEXT,
+    cloudflare_record_id TEXT,
+    created_at           TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
   INSERT OR IGNORE INTO settings (key, value) VALUES ('poll_interval', '300');
   INSERT OR IGNORE INTO settings (key, value) VALUES ('log_retention_days', '30');
   INSERT OR IGNORE INTO settings (key, value) VALUES ('discord_webhook_url', '');
@@ -66,7 +85,7 @@ const recordsDdl = db.prepare(
   "SELECT sql FROM sqlite_master WHERE type='table' AND name='records'"
 ).get();
 
-if (!recordsDdl || !recordsDdl.sql.includes("CHECK(record_type IN")) {
+if (recordsDdl && !recordsDdl.sql.includes("CHECK(record_type IN")) {
   db.exec(`
     PRAGMA foreign_keys = OFF;
     BEGIN;

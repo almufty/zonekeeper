@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { syncAll } from '../scheduler.js';
+import { serverError } from '../lib/http.js';
 
 const router = Router();
 
@@ -8,7 +9,7 @@ router.post('/sync', async (req, res) => {
     const results = await syncAll();
     res.json({ results });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    serverError(res, err, 'sync.error');
   }
 });
 

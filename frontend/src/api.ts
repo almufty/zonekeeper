@@ -93,14 +93,20 @@ export const getStatus = () => req<StatusResponse>('GET', '/api/status');
 export interface SystemSettings {
   poll_interval: number;
   log_retention_days: number;
+  // Secrets are returned masked by GET /settings; *_set flags indicate presence.
   discord_webhook_url: string;
+  discord_webhook_url_set?: boolean;
   telegram_bot_token: string;
+  telegram_bot_token_set?: boolean;
   telegram_chat_id: string;
   notify_on_success: boolean;
   notify_on_error: boolean;
 }
 export const getSettings = () => req<SystemSettings>('GET', '/api/settings');
 export const updateSettings = (data: Partial<SystemSettings>) => req<{ ok: boolean }>('PUT', '/api/settings', data);
+// L-3: explicit reveal of masked notification secrets for editing.
+export const revealSettingsSecrets = () =>
+  req<{ discord_webhook_url: string; telegram_bot_token: string }>('GET', '/api/settings/reveal');
 export const getBackupConfig = () => req<any>('GET', '/api/settings/backup');
 export const restoreBackupConfig = (data: any) => req<{ ok: boolean }>('POST', '/api/settings/restore', data);
 

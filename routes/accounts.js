@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { listAccounts, getAccount, getAccountWithKey, createAccount, updateAccount, deleteAccount } from '../data/accounts.js';
 import { getZones, listDnsRecords, isValidCfId } from '../lib/cloudflare.js';
+import { serverError } from '../lib/http.js';
 
 const router = Router();
 
@@ -8,7 +9,7 @@ router.get('/accounts', (req, res) => {
   try {
     res.json(listAccounts());
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    serverError(res, err, 'accounts.error');
   }
 });
 
@@ -18,7 +19,7 @@ router.get('/accounts/:id', (req, res) => {
     if (!account) return res.status(404).json({ error: 'Account not found' });
     res.json(account);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    serverError(res, err, 'accounts.error');
   }
 });
 
@@ -29,7 +30,7 @@ router.get('/accounts/:id/key', (req, res) => {
     if (!account) return res.status(404).json({ error: 'Account not found' });
     res.json({ auth_key: account.auth_key });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    serverError(res, err, 'accounts.error');
   }
 });
 
@@ -45,7 +46,7 @@ router.post('/accounts', (req, res) => {
     const account = createAccount({ name, auth_email, auth_method, auth_key });
     res.status(201).json(account);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    serverError(res, err, 'accounts.error');
   }
 });
 
@@ -70,7 +71,7 @@ router.put('/accounts/:id', (req, res) => {
     const updated = updateAccount(Number(req.params.id), fields);
     res.json(updated);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    serverError(res, err, 'accounts.error');
   }
 });
 
@@ -81,7 +82,7 @@ router.delete('/accounts/:id', (req, res) => {
     deleteAccount(Number(req.params.id));
     res.status(204).end();
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    serverError(res, err, 'accounts.error');
   }
 });
 

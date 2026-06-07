@@ -4,6 +4,7 @@ import { getLogForRecord } from '../data/syncLog.js';
 import { getZone } from '../data/zones.js';
 import { syncRecord } from '../scheduler.js';
 import { isValidCfId } from '../lib/cloudflare.js';
+import { serverError } from '../lib/http.js';
 
 const router = Router();
 
@@ -17,7 +18,7 @@ router.get('/records', (req, res) => {
     const zoneId = req.query.zoneId != null ? Number(req.query.zoneId) : null;
     res.json(listRecords(zoneId));
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    serverError(res, err, 'records.error');
   }
 });
 
@@ -27,7 +28,7 @@ router.get('/records/:id', (req, res) => {
     if (!record) return res.status(404).json({ error: 'Record not found' });
     res.json(record);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    serverError(res, err, 'records.error');
   }
 });
 
@@ -63,7 +64,7 @@ router.post('/records', (req, res) => {
     });
     res.status(201).json(record);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    serverError(res, err, 'records.error');
   }
 });
 
@@ -105,7 +106,7 @@ router.put('/records/:id', (req, res) => {
     const updated = updateRecord(Number(req.params.id), fields);
     res.json(updated);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    serverError(res, err, 'records.error');
   }
 });
 
@@ -116,7 +117,7 @@ router.delete('/records/:id', (req, res) => {
     deleteRecord(Number(req.params.id));
     res.status(204).end();
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    serverError(res, err, 'records.error');
   }
 });
 
@@ -132,7 +133,7 @@ router.post('/records/:id/sync', async (req, res) => {
     const result = await syncRecord(full);
     res.json(result);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    serverError(res, err, 'records.error');
   }
 });
 
@@ -145,7 +146,7 @@ router.get('/records/:id/log', (req, res) => {
     const limit = Math.min(Math.max(1, Number(req.query.limit) || 50), MAX_LIMIT);
     res.json(getLogForRecord(Number(req.params.id), limit));
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    serverError(res, err, 'records.error');
   }
 });
 

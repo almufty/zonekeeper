@@ -32,8 +32,10 @@ ENV NODE_ENV=production
 ENV PORT=3000
 ENV DB_PATH=/app/data/zonekeeper.db
 
-# Create a data directory for mounting a persistent SQLite database volume
-RUN mkdir -p /app/data
+# M-5 fix: create the data directory and run as the unprivileged built-in `node`
+# user instead of root, ensuring the mounted SQLite volume stays writable.
+RUN mkdir -p /app/data && chown -R node:node /app
+USER node
 
 # Enable docker container healthchecks
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \

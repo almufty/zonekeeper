@@ -3,6 +3,7 @@ import { listRecords } from '../data/records.js';
 import { getRecentLogs } from '../data/syncLog.js';
 import { getLastPublicIpV4, getLastPublicIpV6, getLastPollTime } from '../scheduler.js';
 import { getSetting } from '../data/settings.js';
+import { serverError } from '../lib/http.js';
 
 const router = Router();
 
@@ -27,7 +28,7 @@ router.get('/status', (req, res) => {
       recentLogs,
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    serverError(res, err, 'status.error');
   }
 });
 

@@ -12,8 +12,10 @@ const MUTATING = new Set(['POST', 'PUT', 'DELETE', 'PATCH']);
 export function csrfProtect(req, res, next) {
   if (!MUTATING.has(req.method)) return next();
 
-  // Login may not have a session token yet — skip it
-  if (req.path === '/auth/login' || req.path === '/auth/logout') return next();
+  // Login may not have a session token yet — skip it.
+  // L-2 fix: logout is no longer exempt; it is protected explicitly in the auth
+  // router so a cross-site request cannot force-logout an authenticated user.
+  if (req.path === '/auth/login') return next();
 
   const headerToken = req.headers['x-csrf-token'];
   const sessionToken = req.session?.csrfToken;

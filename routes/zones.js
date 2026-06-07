@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { listZones, getZone, createZone, deleteZone } from '../data/zones.js';
 import { getAccount } from '../data/accounts.js';
 import { isValidCfId } from '../lib/cloudflare.js';
+import { serverError } from '../lib/http.js';
 
 const router = Router();
 
@@ -10,7 +11,7 @@ router.get('/zones', (req, res) => {
     const accountId = req.query.accountId != null ? Number(req.query.accountId) : null;
     res.json(listZones(accountId));
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    serverError(res, err, 'zones.error');
   }
 });
 
@@ -29,7 +30,7 @@ router.post('/zones', (req, res) => {
     const zone = createZone({ account_id: Number(account_id), zone_identifier, name });
     res.status(201).json(zone);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    serverError(res, err, 'zones.error');
   }
 });
 
@@ -40,7 +41,7 @@ router.delete('/zones/:id', (req, res) => {
     deleteZone(Number(req.params.id));
     res.status(204).end();
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    serverError(res, err, 'zones.error');
   }
 });
 

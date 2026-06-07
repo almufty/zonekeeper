@@ -1,6 +1,6 @@
 import { useEffect, useState, FormEvent } from 'react'
 import { useAuth } from '../contexts/AuthContext'
-import { changePassword, getSettings, updateSettings, getBackupConfig, restoreBackupConfig } from '../api'
+import { changePassword, getSettings, updateSettings, getBackupConfig, restoreBackupConfig, revealSettingsSecrets } from '../api'
 
 const card: React.CSSProperties = { background: '#111115', border: '1px solid #252530', borderRadius: 16, padding: 24 }
 
@@ -49,6 +49,7 @@ export default function Settings() {
   const [tgChatId, setTgChatId] = useState('')
   const [notifySuccess, setNotifySuccess] = useState(false)
   const [notifyError, setNotifyError] = useState(true)
+  const [secretsRevealed, setSecretsRevealed] = useState(false)
   const [sysMsg, setSysMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
   const [sysLoading, setSysLoading] = useState(false)
 
@@ -73,6 +74,18 @@ export default function Settings() {
         setSysMsg({ type: 'err', text: `Failed to load settings: ${err.message}` })
       })
   }, [])
+
+  // L-3: secrets arrive masked; fetch the real values only when the admin opts in.
+  const handleRevealSecrets = async () => {
+    try {
+      const secrets = await revealSettingsSecrets()
+      setDiscordUrl(secrets.discord_webhook_url)
+      setTgToken(secrets.telegram_bot_token)
+      setSecretsRevealed(true)
+    } catch (err) {
+      setSysMsg({ type: 'err', text: `Failed to reveal secrets: ${(err as Error).message}` })
+    }
+  }
 
   const handlePasswordSubmit = async (e: FormEvent) => {
     e.preventDefault()
@@ -221,14 +234,23 @@ export default function Settings() {
           </div>
 
           <div>
-            <label style={{ display: 'block', color: '#6b7280', fontFamily: 'monospace', fontSize: 11, marginBottom: 6 }}>
-              discord webhook url
+            <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#6b7280', fontFamily: 'monospace', fontSize: 11, marginBottom: 6 }}>
+              <span>discord webhook url</span>
+              {!secretsRevealed && (
+                <button
+                  type="button"
+                  onClick={handleRevealSecrets}
+                  style={{ background: 'none', border: 'none', color: '#fbbf24', cursor: 'pointer', fontFamily: 'monospace', fontSize: 11, padding: 0 }}
+                >
+                  reveal secrets
+                </button>
+              )}
             </label>
             <input
               type="text"
               placeholder="https://discord.com/api/webhooks/..."
               value={discordUrl}
-              onChange={e => setDiscordUrl(e.target.value)}
+              onChange={e => { setDiscordUrl(e.target.value); setSecretsRevealed(true) }}
               style={inputStyle}
               onFocus={e => (e.target.style.borderColor = '#fbbf24')}
               onBlur={e => (e.target.style.borderColor = '#252530')}
@@ -244,7 +266,7 @@ export default function Settings() {
                 type="password"
                 placeholder="123456:ABC..."
                 value={tgToken}
-                onChange={e => setTgToken(e.target.value)}
+                onChange={e => { setTgToken(e.target.value); setSecretsRevealed(true) }}
                 style={inputStyle}
                 onFocus={e => (e.target.style.borderColor = '#fbbf24')}
                 onBlur={e => (e.target.style.borderColor = '#252530')}

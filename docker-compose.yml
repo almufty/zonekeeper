@@ -10,17 +10,22 @@ services:
       - "3000:3000"
     volumes:
       - zonekeeper_data:/app/data
+    # Secrets are read from a local .env file (copy .env.example to .env and fill
+    # in the generated values below). Do NOT hardcode real secrets in this file.
+    env_file:
+      - .env
     environment:
       - NODE_ENV=production
       - PORT=3000
       - DB_PATH=/app/data/zonekeeper.db
-      # MANDATORY: Set a secure long random string in production for signing session cookies
-      - SESSION_SECRET=change-me-to-a-long-random-string-in-production
-      # STRONGLY RECOMMENDED: Set a 64-character hex string to encrypt Cloudflare keys at rest
-      - ENCRYPTION_KEY=change-me-to-a-64-character-hex-string-in-production
-      # OPTIONAL: Set the initial admin username (default is admin)
-      # - ADMIN_USER=admin
-      # - ADMIN_PASS=initial-admin-password-override
+      # The following MUST be provided via the .env file referenced above:
+      #
+      #   SESSION_SECRET   (required) unique random string, >= 32 chars
+      #                    generate: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+      #   ENCRYPTION_KEY   (required in production) exactly 64 hex chars (32 bytes)
+      #                    generate: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+      #   ADMIN_USER / ADMIN_PASS  (optional) seed the first admin account
+      #   TRUST_PROXY      (optional) number of proxy hops to trust (default 1)
 
 volumes:
   zonekeeper_data:

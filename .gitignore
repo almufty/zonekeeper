@@ -6,3 +6,7 @@ node_modules/
 frontend/dist/
 audit.md
 AGENT.md
+community-scripts.md
+# IDE / editor project files (L-9)
+.idea/
+.vscode/

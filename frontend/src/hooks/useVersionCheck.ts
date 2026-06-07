@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 
-export const CURRENT_VERSION = '1.0.1'
+export const CURRENT_VERSION = '1.1.0'
 
 function normalize(v: string): string {
   const parts = v.split('.').map(s => parseInt(s, 10))

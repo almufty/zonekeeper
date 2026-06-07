@@ -8,7 +8,7 @@
   <img src="https://img.shields.io/badge/version-1.0.1-818cf8?style=flat-square" alt="Version" />
   <img src="https://img.shields.io/badge/license-GPL--3.0-34d399?style=flat-square" alt="License" />
   <img src="https://img.shields.io/badge/node-%3E%3D22-fbbf24?style=flat-square" alt="Node.js" />
-  <img src="https://img.shields.io/badge/docker-ready-60a5fa?style=flat-square" alt="Docker" />
+  <img src="https://img.shields.io/badge/docker-ghcr.io-60a5fa?style=flat-square" alt="Docker" />
 </p>
 
 <p align="center">
@@ -53,14 +53,15 @@
 
 ## Quick Start (Docker Compose)
 
-The easiest way to run Zonekeeper in production is using Docker Compose.
+The easiest way to run Zonekeeper is with Docker Compose. The pre-built image is published to GitHub Container Registry — **no need to clone the repository**.
 
-1. **Create a `docker-compose.yml` file** (or use the one in the root of this repo):
+### Option A — Pull from registry (recommended)
+
+1. **Create a `docker-compose.yml`** with the following content:
    ```yaml
    services:
      zonekeeper:
-       image: zonekeeper:latest
-       build: .
+       image: ghcr.io/almufty/zonekeeper:latest
        container_name: zonekeeper
        restart: unless-stopped
        ports:
@@ -69,27 +70,42 @@ The easiest way to run Zonekeeper in production is using Docker Compose.
          - zonekeeper_data:/app/data
        environment:
          - NODE_ENV=production
-         - PORT=3000
-         - DB_PATH=/app/data/zonekeeper.db
          - SESSION_SECRET=your_long_session_secret_here
          - ENCRYPTION_KEY=your_64_char_hex_encryption_key_here
-   
+
    volumes:
      zonekeeper_data:
    ```
 
 2. **Generate secrets**:
-   Use the utility command below to generate your random secrets:
    ```bash
-   # Generate a random 64-character hex key (use this for ENCRYPTION_KEY and SESSION_SECRET)
+   # Run twice — once for SESSION_SECRET, once for ENCRYPTION_KEY
    node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
    ```
 
-3. **Spin up the container**:
+3. **Start the container**:
    ```bash
    docker compose up -d
    ```
-   Open `http://localhost:3000` to access the interface. On the first run, credentials will be automatically printed to the Docker logs or default to the `admin` account.
+
+### Option B — Build from source
+
+Clone the repository first, then use the included `docker-compose.yml` which has the local build pre-configured:
+
+```bash
+git clone https://github.com/almufty/zonekeeper.git
+cd zonekeeper-ddns
+# Edit docker-compose.yml to set your SESSION_SECRET and ENCRYPTION_KEY, then:
+docker compose up -d
+```
+
+---
+
+Open `http://localhost:3000` to access the interface. On the first run, the admin password will be printed to the container logs:
+
+```bash
+docker logs zonekeeper
+```
 
 ---
 

@@ -1,6 +1,9 @@
 services:
   zonekeeper:
-    build: .
+    image: ghcr.io/almufty/zonekeeper:latest
+    # To build locally from source instead of pulling the pre-built image,
+    # uncomment the line below (requires the full repo to be cloned):
+    # build: .
     container_name: zonekeeper
     restart: unless-stopped
     ports:

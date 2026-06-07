@@ -12,3 +12,12 @@ body { background-color: #0d0d0f; color: #e5e7eb; font-family: var(--font-family
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: #111115; }
 ::-webkit-scrollbar-thumb { background: #252530; border-radius: 3px; }
+
+@keyframes zk-pulse-amber {
+  0%, 100% { color: #fbbf24; opacity: 1; }
+  50%       { color: #f59e0b; opacity: 0.55; }
+}
+.zk-version-pulse {
+  animation: zk-pulse-amber 1.8s ease-in-out infinite;
+  cursor: pointer;
+}

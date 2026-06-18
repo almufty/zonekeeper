@@ -128,7 +128,7 @@ router.get('/settings/backup', (req, res) => {
     const settings = db.prepare('SELECT key, value FROM settings').all();
 
     res.json({
-      version: '1.1.1',
+      version: '1.1.2',
       accounts,
       zones,
       records,

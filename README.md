@@ -5,7 +5,7 @@
 <h1 align="center">Zonekeeper — Cloudflare DDNS Manager</h1>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.1.0-818cf8?style=flat-square" alt="Version" />
+  <img src="https://img.shields.io/badge/version-1.1.1-818cf8?style=flat-square" alt="Version" />
   <img src="https://img.shields.io/badge/license-GPL--3.0-34d399?style=flat-square" alt="License" />
   <img src="https://img.shields.io/badge/node-%3E%3D22-fbbf24?style=flat-square" alt="Node.js" />
   <img src="https://img.shields.io/badge/docker-ghcr.io-60a5fa?style=flat-square" alt="Docker" />

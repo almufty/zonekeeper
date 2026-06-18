@@ -81,6 +81,12 @@ export function createApp() {
         frameSrc:    ["'none'"],
         objectSrc:   ["'none'"],
         baseUri:     ["'self'"],
+        // Helmet enables upgrade-insecure-requests by default, which rewrites
+        // every asset request to https://. On a plain-HTTP LAN/server deploy
+        // (http://<host>:3000) that breaks the JS/CSS bundle and renders a
+        // blank page. Disabled so HTTP setups work; a TLS proxy already serves
+        // an https origin to the browser, so nothing is lost there.
+        upgradeInsecureRequests: null,
       },
     },
   }));
